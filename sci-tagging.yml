@@ -1,0 +1,80 @@
+---
+- hosts: "{{ target_hostname }}"
+  user: build
+  connection: ssh
+  vars:
+    sci_tag_name: "{{ SCI_TAG_NAME }}"
+    version_number: "{{ VERSION_NUMBER }}"
+  vars_files:
+    - sci-inv.yml
+
+  tasks:
+   - name: All dependent base repos for SCI tagging
+     shell: |
+        cd /builds/v{{ version_number }}/scpp-cbo/source/{{ item }}
+        git fetch
+        git pull
+        git tag -d {{ sci_tag_name }}
+        git push origin :refs/tags/{{ sci_tag_name }}
+        git tag {{ sci_tag_name }}
+        git push origin {{ sci_tag_name }}
+     with_items:
+      - base
+      - bpe
+      - dashboard
+      - dif
+      - dwm
+      - epi
+      - ifee
+      - ifse
+      - mps
+      - msf-core
+      - msf-ui
+      - mif-uitests
+      - mps-tests
+      - cbo-uitests
+      - oum
+      - reports
+      - scpp-builder
+      - scpp-uitests
+      - see
+      - sp
+      - tools
+      - cbobase
+      - scholar-client
+      - cboframework
+      - cbotransactional
+      - scholar-server
+      - idp
+
+   - name: ManhDB repo tagging
+     shell: |
+        cd /builds/v{{ version_number }}/db/source/manhdbdeploy/Oracle
+        git fetch
+        git pull
+        git tag -d {{ sci_tag_name }}
+        git push origin :refs/tags/{{ sci_tag_name }}
+        git tag {{ sci_tag_name }} 
+        git push origin {{ sci_tag_name }}
+
+   - name: Creating SCI tagging & Re-tagging Folder under staging location (httpd server source)
+     file: 
+      path: "/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}"
+      state: directory
+      mode: 0775
+
+  
+   - name: Copy all required zip files for SCI tagging
+     copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      mode: "{{item.mode}}"
+     with_items:
+      - { src: '/staging/{{ version_number }}/web/builds/production/{{ mmc_version }}/MMC.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+      - { src: '/staging/{{ version_number }}/web/builds/production/dashboard/dashboard-prod-{{ version_number }}.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+      - { src: '/staging/{{ version_number }}/web/builds/production/mda/mda-prod-{{ version_number }}.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+      - { src: '/staging/{{ version_number }}/web/builds/production/reports/reports-{{ version_number }}.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+      - { src: '/staging/{{ version_number }}/web/builds/production/cbo/scpp-cbo-prod-{{ version_number }}.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+      - { src: '/staging/{{ version_number }}/web/builds/production/mip/mip-{{ version_number }}.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+      - { src: '/staging/{{ version_number }}/web/builds/production/database/ManhDBDeploy.zip',dest: '/staging/{{ version_number }}/web/builds/production/{{ sci_tag_name }}', mode: '0775'}
+
